@@ -1,37 +1,49 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, request, flash, session
+from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mdm.db'
-app.config['JWT_SECRET_KEY'] = 'your_secret_key'
+app.config['SECRET_KEY'] = 'supersecretkey'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+bcrypt = Bcrypt(app)
 db = SQLAlchemy(app)
-jwt = JWTManager(app)
 
-# Other models (User, Device) are here...
+# Define User model
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(150), nullable=False, unique=True)
+    password = db.Column(db.String(60), nullable=False)
 
-@app.route('/enroll', methods=['GET', 'POST'])
-def enroll_device_via_form():
-    if request.method == 'POST':
-        device_name = request.form.get('device_name')
-        device_type = request.form.get('device_type')
-
-        # Assuming the user is authenticated and user_id is obtained in production
-        # For demo purposes, we'll assign a dummy user_id (replace this in production)
-        user_id = 1  # Replace with actual user_id
-        device_token = 'generated_token_here'
-
-        new_device = Device(device_name=device_name, device_type=device_type, user_id=user_id, device_token=device_token)
-        db.session.add(new_device)
+# Create a default SysAdmin account
+@app.before_first_request
+def create_admin():
+    if not User.query.filter_by(username='SysAdmin').first():
+        hashed_password = bcrypt.generate_password_hash('F1rewater2011!!').decode('utf-8')
+        admin = User(username='SysAdmin', password=hashed_password)
+        db.session.add(admin)
         db.session.commit()
 
-        return redirect(url_for('enrollment_success'))
-    return render_template('enroll.html')
+# Login route
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        if user and bcrypt.check_password_hash(user.password, password):
+            session['user_id'] = user.id
+            flash('Login successful!', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Login failed. Check your credentials and try again.', 'danger')
+    return render_template('login.html')
 
-@app.route('/enrollment_success')
-def enrollment_success():
-    return "Device successfully enrolled!"
+# Dashboard route
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return 'Welcome to the admin dashboard!'
 
 if __name__ == '__main__':
     app.run(debug=True)
-# app.py content
