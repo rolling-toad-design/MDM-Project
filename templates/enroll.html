@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Enrollment</title>
+</head>
+<body>
+    <h1>Device Enrollment</h1>
+    <form action="/enroll" method="POST">
+        <label for="device_name">Device Name:</label><br>
+        <input type="text" id="device_name" name="device_name" required><br><br>
+
+        <label for="device_type">Device Type:</label><br>
+        <select id="device_type" name="device_type" required>
+            <option value="Windows">Windows</option>
+            <option value="Linux">Linux</option>
+            <option value="macOS">macOS</option>
+        </select><br><br>
+
+        <input type="submit" value="Enroll Device">
+    </form>
+</body>
+</html>
